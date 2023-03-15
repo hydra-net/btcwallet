@@ -5,10 +5,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/btcsuite/btcutil/gcs/builder"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/btcsuite/btcutil/gcs/builder"
 
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -103,7 +104,10 @@ func (c *LightWalletClient) BackEnd() string {
 // GetBestBlock returns the highest block known to lightwallet.
 func (c *LightWalletClient) GetBestBlock() (*chainhash.Hash, int32, error) {
 	log.Debugf("Attempting to GetBestBlock from lw")
-	return c.ChainConn.grpcClient.GetBestBlock()
+	hash, number, err := c.ChainConn.grpcClient.GetBestBlock()
+	log.Debugf("Got GetBestBlock from lw hash: %s", hash.String())
+
+	return hash, number, err
 }
 
 // GetFilterBlock returns filter block for given hash
@@ -121,7 +125,7 @@ func (c *LightWalletClient) GetUnspentOutput(hash *chainhash.Hash, index uint32)
 // GetSpendDetails returns rawtx where outpoint was spent
 func (c *LightWalletClient) GetSpendingDetails(hash *chainhash.Hash, index uint32) (*btcutil.Tx, int32, error) {
 	log.Debugf("Attempting to GetSpendingDetails from lw for hash %s", hash.String())
-	txConf, err :=  c.ChainConn.grpcClient.GetSpendingDetails(hash, index)
+	txConf, err := c.ChainConn.grpcClient.GetSpendingDetails(hash, index)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -362,8 +366,8 @@ func (c *LightWalletClient) LoadTxFilter(reset bool, filters ...interface{}) err
 	for _, filter := range filters {
 		switch filter := filter.(type) {
 		case []btcutil.Address, []wire.OutPoint, []*wire.OutPoint,
-		map[wire.OutPoint]btcutil.Address, []chainhash.Hash,
-		[]*chainhash.Hash:
+			map[wire.OutPoint]btcutil.Address, []chainhash.Hash,
+			[]*chainhash.Hash:
 
 			// Proceed to check the next filter type.
 		default:
@@ -961,7 +965,6 @@ func (c *LightWalletClient) FilterBlocks(
 			continue
 		}
 
-
 		key := builder.DeriveKey(&blk.Hash)
 		matched, err := filter.MatchAny(key, watchList)
 		if err != nil {
@@ -1017,7 +1020,6 @@ func (c *LightWalletClient) rescan(start chainhash.Hash) error {
 	// the height, as the hash can change during a reorganization, which we
 	// catch by testing connectivity from known blocks to the previous
 	// block.
-
 
 	bestHash, bestHeight, err := c.GetBestBlock()
 	if err != nil {
